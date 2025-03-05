@@ -13,8 +13,15 @@
 
   "environment": "*",
   "entrypoints": {
-    "client": ["com.thestone.anubis.AnubisClient"],
-    "main": ["com.thestone.anubis.Anubis"]
+    "main": [
+      "com.thestone.anubis.Anubis"
+    ],
+    "client": [
+      "com.thestone.anubis.AnubisClient"
+    ],
+    "fabric-datagen": [
+      "com.thestone.anubis.data.ModDataGen"
+    ]
   },
 
   "mixins": [
