@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "anubis",
+  "version": "${version}",
+
+  "name": "Anubis",
+  "description": "",
+  "authors": [],
+  "contact": {},
+
+  "license": "All-Rights-Reserved",
+  "icon": "assets/anubis/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+    "client": ["com.thestone.anubis.AnubisClient"],
+    "main": ["com.thestone.anubis.Anubis"]
+  },
+
+  "mixins": [
+    "anubis.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
