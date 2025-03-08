@@ -1,11 +1,15 @@
 package com.thestone.anubis.entity;
 
+import com.thestone.anubis.main.ModAninamtions;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityStatuses;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.boss.BossBar;
 import net.minecraft.entity.boss.ServerBossBar;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.passive.MerchantEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -22,21 +26,15 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 import java.util.Random;
 
 public class AnubisEntity extends HostileEntity implements GeoEntity {
-    private static final RawAnimation WALK_ANIMATION = RawAnimation.begin().thenLoop("walk");
-    private static final RawAnimation IDLE_ANIMATION = RawAnimation.begin().thenLoop("idle");
-    private static final RawAnimation ATTACK_ANIMATION_1 = RawAnimation.begin().thenPlay("attack_1");
-    private static final RawAnimation ATTACK_ANIMATION_2 = RawAnimation.begin().thenPlay("attack_2");
-    private static final RawAnimation ATTACK_ANIMATION_3 = RawAnimation.begin().thenPlay("attack_3");
-    private static final RawAnimation ATTACK_ANIMATION_4 = RawAnimation.begin().thenPlay("attack_4");
-    private static final RawAnimation ATTACK_ANIMATION_5 = RawAnimation.begin().thenPlay("attack_5");
-    private static final RawAnimation ATTACK_ANIMATION_6 = RawAnimation.begin().thenPlay("attack_6");
-    private static final RawAnimation ATTACK_ANIMATION_7 = RawAnimation.begin().thenPlay("attack_7");
-    private static final RawAnimation DEAD_ANIMATION = RawAnimation.begin().thenPlay("dead");
+
+
     private final AnimatableInstanceCache animatableInstanceCache = GeckoLibUtil.createInstanceCache(this);
 
 
-    private final ServerBossBar bossBar = new ServerBossBar(Text.literal("Anubis"),
+    public static final ServerBossBar bossBar = new ServerBossBar(Text.literal("Anubis"),
             BossBar.Color.YELLOW, BossBar.Style.NOTCHED_10);
+
+    private int deadTimer;
 
     public AnubisEntity(EntityType<? extends AnubisEntity> entityType, World world) {
         super(entityType, world);
@@ -75,7 +73,8 @@ public class AnubisEntity extends HostileEntity implements GeoEntity {
     public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
         controllerRegistrar.add(new AnimationController<>(this, "MovingController", 0, this::movingPredicate));
         controllerRegistrar.add(new AnimationController<>(this, "AttackController", 0, this::attackPredicate));
-        controllerRegistrar.add(new AnimationController<>(this, "DeadController", 0, this::deathPredicate));
+        controllerRegistrar.add(new AnimationController<>(this, "deadController", 0, this::deathPredicate));
+
     }
 
 
@@ -85,13 +84,13 @@ public class AnubisEntity extends HostileEntity implements GeoEntity {
             tAnimationState.getController().forceAnimationReset();
             int randomIndex = choose.nextInt(7);
             switch (randomIndex) {
-                case 0 -> tAnimationState.setAnimation(ATTACK_ANIMATION_1);
-                case 1 -> tAnimationState.setAnimation(ATTACK_ANIMATION_2);
-                case 2 -> tAnimationState.setAnimation(ATTACK_ANIMATION_3);
-                case 3 -> tAnimationState.setAnimation(ATTACK_ANIMATION_4);
-                case 4 -> tAnimationState.setAnimation(ATTACK_ANIMATION_5);
-                case 5 -> tAnimationState.setAnimation(ATTACK_ANIMATION_6);
-                case 6 -> tAnimationState.setAnimation(ATTACK_ANIMATION_7);
+                case 0 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_1);
+                case 1 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_2);
+                case 2 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_3);
+                case 3 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_4);
+                case 4 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_5);
+                case 5 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_6);
+                case 6 -> tAnimationState.setAnimation(ModAninamtions.ATTACK_ANIMATION_7);
 
             }
 
@@ -102,15 +101,25 @@ public class AnubisEntity extends HostileEntity implements GeoEntity {
     }
 
     private <E extends GeoAnimatable> PlayState movingPredicate(AnimationState<E> tAnimationState) {
-        return (tAnimationState.isMoving() ? tAnimationState.setAndContinue(WALK_ANIMATION) : tAnimationState.setAndContinue(IDLE_ANIMATION));
+        return (tAnimationState.isMoving() ? tAnimationState.setAndContinue(ModAninamtions.WALK_ANIMATION) : tAnimationState.setAndContinue(ModAninamtions.IDLE_ANIMATION));
 
 
     }
-        //todo Add workable dead animation
-    private <E extends GeoAnimatable> PlayState deathPredicate(AnimationState<E> tAnimationState) {
-        tAnimationState.setAndContinue(DEAD_ANIMATION);
-        return this.isDead() ? PlayState.CONTINUE : PlayState.STOP;
 
+    private <E extends GeoAnimatable> PlayState deathPredicate(AnimationState<E> tAnimationState) {
+        if (this.isDead())
+            return tAnimationState.setAndContinue(ModAninamtions.DEAD_ANIMATION);
+
+        return null;
+    }
+
+    @Override
+    protected void updatePostDeath() {
+        this.deadTimer++;
+        if (this.deadTimer >= 100) {
+            this.getWorld().sendEntityStatus(this, EntityStatuses.ADD_DEATH_PARTICLES);
+            this.remove(Entity.RemovalReason.KILLED);
+        }
     }
 
 
@@ -122,20 +131,21 @@ public class AnubisEntity extends HostileEntity implements GeoEntity {
     @Override
     public void onStartedTrackingBy(ServerPlayerEntity player) {
         super.onStartedTrackingBy(player);
-        this.bossBar.addPlayer(player);
+        bossBar.addPlayer(player);
 
 
     }
 
+
     @Override
     public void onStoppedTrackingBy(ServerPlayerEntity player) {
         super.onStoppedTrackingBy(player);
-        this.bossBar.removePlayer(player);
+        bossBar.removePlayer(player);
     }
 
     @Override
     protected void mobTick() {
         super.mobTick();
-        this.bossBar.setPercent(this.getHealth() / this.getMaxHealth());
+        bossBar.setPercent(this.getHealth() / this.getMaxHealth());
     }
 }
